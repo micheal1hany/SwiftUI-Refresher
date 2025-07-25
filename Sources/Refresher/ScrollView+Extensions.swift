@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 extension ScrollView {
-    public func refresher<RefreshView>(style: Style = .default,
+    @MainActor public func refresher<RefreshView>(style: Style = .default,
                                        config: Config = Config(),
                                        refreshView: @escaping (Binding<RefresherState>) -> RefreshView,
                                        action: @escaping RefreshAction) -> RefreshableScrollView<Content, RefreshView> {
@@ -17,7 +17,7 @@ extension ScrollView {
 }
 
 extension ScrollView {
-    public func refresher(style: Style = .default,
+    @MainActor public func refresher(style: Style = .default,
                           config: Config = Config(),
                           action: @escaping RefreshAction) -> some View {
         RefreshableScrollView(axes: axes,
@@ -32,7 +32,7 @@ extension ScrollView {
 
 
 extension ScrollView {
-    public func refresher<RefreshView>(style: Style = .default,
+    @MainActor public func refresher<RefreshView>(style: Style = .default,
                                        config: Config = Config(),
                                        refreshView: @escaping (Binding<RefresherState>) -> RefreshView,
                                        action: @escaping AsyncRefreshAction) -> RefreshableScrollView<Content, RefreshView> {
@@ -52,7 +52,7 @@ extension ScrollView {
 }
 
 extension ScrollView {
-    public func refresher(style: Style = .default,
+    @MainActor public func refresher(style: Style = .default,
                           config: Config = Config(),
                           action: @escaping AsyncRefreshAction) -> some View {
         RefreshableScrollView(axes: axes,

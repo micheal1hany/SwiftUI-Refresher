@@ -17,7 +17,7 @@ struct OffsetReader: View {
 }
 
 private struct OffsetPreferenceKey: PreferenceKey {
-    static var defaultValue = CGFloat.zero
+    static let defaultValue = CGFloat.zero
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()

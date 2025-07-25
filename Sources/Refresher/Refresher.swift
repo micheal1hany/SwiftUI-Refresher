@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
-import SwiftUIIntrospect
-import RenderLock
+
 
 public typealias RefreshAction = (_ completion: @escaping () -> ()) -> ()
 public typealias AsyncRefreshAction = () async -> ()
@@ -102,10 +101,9 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
     @State var state: RefresherState
     @State var distance: CGFloat = 0
     @State var rawDistance: CGFloat = 0
-    @State var renderLock = false
     private let style: Style
     private let config: Config
-
+    
     @State private var uiScrollView: UIScrollView?
     @State private var isRefresherVisible = true
     @State private var isFingerDown = false
@@ -150,27 +148,24 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
         return 0
     }
     
-    private var isTracking: Bool {
-        guard let scrollView = uiScrollView else { return false }
-        return scrollView.isTracking
-    }
     
     private var showRefreshControls: Bool {
         return isFingerDown || isRefresherVisible
     }
     
+    
     @ViewBuilder
     private var refreshSpinner: some View {
         if style == .default || style == .overlay {
             RefreshSpinnerView(offScreenPoint: config.defaultSpinnerOffScreenPoint,
-                                pullClipPoint: config.defaultSpinnerPullClipPoint,
-                                mode: state.modeAnimated,
-                                stopPoint: config.defaultSpinnerSpinnerStopPoint,
-                                refreshHoldPoint: config.headerShimMaxHeight / 2,
-                                refreshView: refreshView($state),
-                                headerInset: $headerInset,
-                                refreshAt: config.refreshAt)
-                .opacity(showRefreshControls ? 1 : 0)
+                               pullClipPoint: config.defaultSpinnerPullClipPoint,
+                               mode: state.modeAnimated,
+                               stopPoint: config.defaultSpinnerSpinnerStopPoint,
+                               refreshHoldPoint: config.headerShimMaxHeight / 2,
+                               refreshView: refreshView($state),
+                               headerInset: $headerInset,
+                               refreshAt: config.refreshAt)
+            .opacity(showRefreshControls ? 1 : 0)
         }
     }
     
@@ -182,7 +177,7 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
                                       position: distance,
                                       refreshHoldPoint: config.headerShimMaxHeight / 2,
                                       refreshView: refreshView($state))
-                .opacity(showRefreshControls ? 1 : 0)
+            .opacity(showRefreshControls ? 1 : 0)
         }
     }
     
@@ -193,7 +188,7 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
                                        state: state,
                                        refreshHoldPoint: config.headerShimMaxHeight / 2,
                                        refreshView: refreshView($state))
-                .opacity(showRefreshControls ? 1 : 0)
+            .opacity(showRefreshControls ? 1 : 0)
         }
     }
     
@@ -212,18 +207,19 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
                     // Content wrapper with refresh banner
                     VStack(spacing: 0) {
                         content
-                            .renderLocked(with: $renderLock)
                             .offset(y: refreshHeaderOffset)
                     }
                     // renders over content
                     refreshSpinner
                 }
             }
-            .introspect(.scrollView, on: .iOS(.v14, .v15, .v16, .v17)) { scrollView in
-                DispatchQueue.main.async {
-                    uiScrollView = scrollView
+            .simultaneousGesture(DragGesture()
+                .onChanged { _ in
+                    if !self.isFingerDown {
+                        self.isFingerDown = true
+                    }
                 }
-            }
+            )
             .onChange(of: globalGeometry.frame(in: .global)) { val in
                 headerInset = val.minY
             }
@@ -236,13 +232,13 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
     }
     
     private func offsetChanged(_ val: CGFloat) {
-        isFingerDown = isTracking
+        
         distance = val - headerInset
         state.dragPosition = normalize(from: 0, to: config.refreshAt, by: distance)
         
-        // If the refresh state has settled, we are not touching the screen, and the offset has settled, we can signal the view to update itself.
-        if canRefresh, !isFingerDown, distance <= 0 {
-            renderLock = false
+        if distance == 0 && isFingerDown {
+            // Reset state when the user lifts their finger and returns to the original offset
+            isFingerDown = false
         }
         
         guard canRefresh else {
@@ -255,29 +251,27 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
         }
         
         isRefresherVisible = true
-
-        if distance >= config.refreshAt, !renderLock {
-            #if !os(visionOS)
+        
+        
+        if distance >= config.refreshAt {
+#if !os(visionOS)
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            #endif
-            renderLock = true
+#endif
+            
             canRefresh = false
             set(mode: .refreshing)
             
             refreshAction {
-                // The ordering here is important - calling `set` on the main queue after `refreshAction` prevents
-                // strange animaton behaviors on some complex views
+                
                 DispatchQueue.main.asyncAfter(deadline: .now() + config.holdTime) {
                     set(mode: .notRefreshing)
-                    self.renderLock = false
-                    
                     DispatchQueue.main.asyncAfter(deadline: .now() + config.cooldown) {
                         self.canRefresh = !isFingerDown
                         self.isRefresherVisible = false
                     }
                 }
             }
-
+            
         } else if distance > 0, state.mode != .refreshing {
             set(mode: .pulling)
         }

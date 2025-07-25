@@ -1,5 +1,7 @@
-// swift-tools-version: 6.0
-//  Package.swift
+// swift-tools-version:5.9
+//
+//  Package@swift-5.9.swift
+//
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -22,5 +24,5 @@ let package = Package(
             name: "Refresher", path: "Sources"),
         
     ],
-    swiftLanguageVersions: [.v6]
+    swiftLanguageVersions: [.v5]
 )
